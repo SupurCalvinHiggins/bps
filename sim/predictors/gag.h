@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <math.h>
+#include <memory>
 #include <stdlib.h>
 #include <string.h>
 
@@ -36,6 +37,9 @@ static_assert(CNT_SIZE <= 32, "invalid cnt size");
 // Saturating counter maximum.
 #define CNT_MAX ((1 << CNT_SIZE) - 1)
 
+// Saturating counter initial value.
+#define CNT_INIT ((CNT_MAX >> 1) + 1)
+
 // Pattern history table entries.
 #ifndef PHT_SIZE
 #define PHT_SIZE (1 << GHR_SIZE)
@@ -50,35 +54,37 @@ class PREDICTOR {
 
 private:
   UINT32 ghr;
-  UINT32 pht[PHT_SIZE];
+  std::unique_ptr<UINT32[]> pht;
 
-  inline UINT32 hash(UINT32 pc) const { return pc & (PHT_SIZE - 1); }
+  inline UINT32 hash(UINT32 x) const { return x % PHT_SIZE; }
 
 public:
   PREDICTOR(void) {
     ghr = 0;
+    pht = std::make_unique<UINT32[]>(PHT_SIZE);
     for (UINT32 i = 0; i < PHT_SIZE; ++i) {
-      pht[i] = 0;
+      pht[i] = CNT_INIT;
     }
   };
 
   bool GetPrediction(UINT32 PC) {
-    const auto idx = hash(PC);
-    const auto pred = pht[idx] > (CNT_MAX >> 1);
+    const auto idx = hash(ghr);
+    const bool pred = pht[idx] > (CNT_MAX >> 1);
     return pred;
   };
 
   void UpdatePredictor(UINT32 PC, bool resolveDir, bool predDir,
                        UINT32 branchTarget) {
-    const auto idx = hash(PC);
-    if (predDir) {
+    const auto idx = hash(ghr);
+    if (resolveDir) {
       pht[idx] = SatIncrement(pht[idx], CNT_MAX);
     } else {
       pht[idx] = SatDecrement(pht[idx]);
     }
 
     ghr <<= 1;
-    ghr += predDir;
+    ghr &= (1 << GHR_SIZE) - 1;
+    ghr += resolveDir;
   };
 
   void TrackOtherInst(UINT32 PC, OpType opType, UINT32 branchTarget) {

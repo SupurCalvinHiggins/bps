@@ -2,7 +2,8 @@ import itertools as it
 import subprocess
 from pathlib import Path
 
-params = {"GHT_SIZE": [17, 18, 19], "CNT_SIZE": [1, 2, 3]}
+# params = {"GHR_SIZE": [16, 17, 18], "CNT_SIZE": [1, 2, 3]}
+params = {"GHR_SIZE": [17], "CNT_SIZE": [2]}
 
 combs = [dict(zip(params, v)) for v in it.product(*params.values())]
 
@@ -36,7 +37,8 @@ for comb in combs:
         "-o",
         path.absolute().as_posix(),
     ]
-    subprocess.run(cmd)
+    print(" ".join(cmd))
+    subprocess.run(cmd, shell=True)
 
 
 for path in build_path.glob("*"):
