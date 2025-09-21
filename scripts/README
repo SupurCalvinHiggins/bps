@@ -1,0 +1,19 @@
+#  This shell file can be used for launching simulations for all 40 workloads
+
+
+The file bench_list contains the list of all benchmarks (suite: SHORT, LONG, all)
+
+
+
+To run all 40 benchmarks
+
+./runall.pl -d "../results/<RESULTS_DIR_NAME>" &
+
+
+To get the results and AMEAN for all 40 benchmarks
+
+./getdata.pl -d "../results/<RESULTS_DIR_NAME>"
+
+
+To see working examples, check out ../scripts/doit.sh
+

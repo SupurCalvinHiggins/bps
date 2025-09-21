@@ -1,0 +1,9 @@
+history lengths:6 9 14 21 32 48 72 110 166 251 380 576 872 1321 2000 
+TAGE -99614720 bytes, LOOPPRED 2195456 bytes, Stat Cor 196608 bytes, IUM  160 bytes, TOTAL STORAGESIZE= -97222496 bytes
+.............................
+
+NUM_INSTRUCTIONS     	 :   29498081
+NUM_CONDITIONAL_BR   	 :    4266796
+NUM_MISPREDICTIONS   	 :      39692
+MISPRED_PER_1K_INST  	 :      1.346
+

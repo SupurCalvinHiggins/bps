@@ -1,0 +1,31 @@
+You are allowed to submit only predictor.h and predictor.cc files.
+So, any changes you make to the other files will not be reflected in
+our setup.
+
+
+To compile:  
+============
+
+type make
+
+
+To run:
+===========
+
+./predictor ../traces/<TRACE_FILE_NAME>
+
+
+Scripts:
+===========
+
+To run all 40 benchmarks
+
+../scripts/runall.pl -d "../results/<RESULTS_DIR_NAME>"
+
+
+To get AMEAN for all 40 benchmarks
+
+../scripts/getdata.pl -d "../results/<RESULTS_DIR_NAME>"
+
+
+To see working examples, check out ../scripts/doit.sh
