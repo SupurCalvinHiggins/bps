@@ -11,14 +11,6 @@
 #include "tracer.h"
 #include "utils.h"
 
-/////////////// STORAGE BUDGET JUSTIFICATION ////////////////
-// Total storage budget: 32KB + 17 bits
-// Total PHT counters: 2^17
-// Total PHT size = 2^17 * 2 bits/counter = 2^18 bits = 32KB
-// GHR size: 17 bits
-// Total Size = PHT size + GHR size
-/////////////////////////////////////////////////////////////
-
 // GAg
 // Index a pattern history table with a global history register.
 
