@@ -12,14 +12,31 @@ PARAMS = {
         "CNT_BITS": [2],
         "USE_HASH": [0],
     },
+    "TBP": {
+        "LHT_BITS": [10, 12, 14],
+        "LPT_BITS": [10, 12, 14],
+        "GPT_BITS": [17, 18],
+        "GHR_BITS": [17, 18],
+        "BPT_BITS": [10, 12, 14],
+        "LHT_R_BITS": [10, 12, 14],
+        "LPT_R_BITS": [2, 3],
+        "GPT_R_BITS": [2, 3],
+        "BPT_R_BITS": [2, 3],
+    },
 }
 SIZE = {
     "GAG": lambda c: c["GHR_SIZE"] + c["CNT_SIZE"] * 2 ** c["GHR_SIZE"],
     "PAG": lambda c: c["LHT_BITS"] * 2 ** c["LHR_BITS"]
     + c["CNT_BITS"] * 2 ** c["LHT_BITS"],
+    "TBP": lambda c: c["LHT_R_BITS"] * 2 ** c["LHT_BITS"]
+    + c["LPT_R_BITS"] * 2 ** c["LPT_BITS"]
+    + c["GPT_R_BITS"] * 2 ** c["GPT_BITS"]
+    + c["GHR_BITS"]
+    + c["BPT_R_BITS"] * 2 ** c["BPT_BITS"],
 }
 
 MAX_SIZE = 2**19
+MIN_SIZE = (1 / 1.1) * MAX_SIZE
 
 BUILDS_PATH = Path("./builds")
 SCRIPTS_PATH = Path("./scripts")
@@ -28,20 +45,8 @@ RESULTS_PATH = Path("./results")
 
 def is_frontier(predictor: str, comb: dict):
     size = SIZE[predictor](comb)
-    if size > MAX_SIZE:
-        return False
-
-    for key in comb:
-        # TODO: Fix this hack to only consider table size parameters for frontier.
-        if "T_" not in key:
-            continue
-        comb[key] += 1
-        new_size = SIZE[predictor](comb)
-        comb[key] -= 1
-        if new_size < MAX_SIZE:
-            return False
-
-    return True
+    print(MAX_SIZE / size)
+    return size <= MAX_SIZE and size >= MIN_SIZE
 
 
 def uuid(predictor: str, comb: dict) -> str:
@@ -128,7 +133,8 @@ def main() -> None:
 
     params = PARAMS[predictor]
     combs = [dict(zip(params, v)) for v in it.product(*params.values())]
-    # combs = [c for c in combs if is_frontier(predictor, c)]
+    combs = [c for c in combs if is_frontier(predictor, c)]
+    print(f"{len(combs)} combinations")
 
     for comb in combs:
         build(predictor, comb)
