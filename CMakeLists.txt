@@ -19,6 +19,7 @@ set(SOURCES
     simulator/main.cc
     simulator/predictor.cc
     simulator/tracer.cc
+    lib/xxhash.cpp
 )
 
 add_executable(bps ${SOURCES})
@@ -26,6 +27,7 @@ add_executable(bps ${SOURCES})
 target_include_directories(bps PRIVATE
     simulator
     predictors
+    lib
 )
 
 target_compile_options(bps PRIVATE

@@ -1,0 +1,216 @@
+\documentclass{article}
+
+\usepackage{booktabs}
+
+\title{ELE 548: Branch Predictors}
+\author{Calvin Higgins}
+
+\begin{document}
+
+\maketitle
+
+\section{Tournament Branch Predictor}
+
+\subsection{Design}
+
+\subsubsection{Prediction}
+
+The tournament branch predictor consists of three components:
+\begin{enumerate}
+    \item GAg predictor. The global branch history is mapped to a saturating counter via a table-lookup, and used to make a prediction.
+    \item PAg predictor. The program counter is mapped to a local branch history via a table-lookup. Then, the local branch history is mapped to a saturating 
+    counter via another table-lookup, and used to make a prediction. The second table is shared between all local branch histories.
+    \item Bimodal choice predictor. The program counter is mapped to a saturating counter via a table-lookup, and used to predict whether the GAg or PAg 
+    prediction should be used.
+\end{enumerate}
+
+\noindent
+The size of the four tables, the number of bits in the global and local branch histories, and the number of bits in the saturating counters are left as 
+compile-time parameters. The saturating counters are always initialized to weakly-taken. This implies that GAg is the default predictor during warmup.
+
+\subsubsection{Update}
+
+Each of the three components are updated independently:
+\begin{enumerate}
+    \item GAg predictor. The global branch history is extended with the actual branch result. The saturating counter is increased if the branch was taken, and 
+    decreased otherwise.
+    \item PAg predictor. The local branch history is extended with the actual branch result. The saturating counter is increased if the branch was taken, and
+    decreased otherwise.
+    \item Bimodal choice predictor. The update only occurs if the GAg and PAg predictions disagreed. In this case, the saturating counter is increased if GAg 
+    was correct and decreased if PAg was correct.
+\end{enumerate}
+
+\subsection{Hyperparameter Sweep}
+\label{sec:tbp_hp}
+
+All combinations of compile-time parameters detailed in Table~\ref{tab:tbp_hp} were considered. Hyperparameter combinations that exceeded the strict hardware 
+budget of 64KiB ($2^{19}$ bits) were rejected. Likewise, hyperparameter combinations that over-allocated the global or local saturating counter tables (i.e. 
+when the history length is insufficient to index every entry), or did not come within 10\% of the hardware budget were rejected. The remaining 118 
+hyperparameter combinations were simulated. 
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        \textbf{Hyperparameter} & \textbf{Values} \\
+        \midrule
+        Global history register bits       & $\{17, 18\}$ \\
+        Global saturating counter table size & $\{2^{17}, 2^{18}\}$ \\
+        Global saturating counter bits     & $\{2, 3\}$ \\
+        Local history table size           & $\{2^{10}, 2^{12}, 2^{14}\}$ \\
+        Local history bits                 & $\{10, 12, 14\}$ \\
+        Local saturating counter table size & $\{2^{10}, 2^{12}, 2^{14}\}$ \\
+        Local saturating counter bits      & $\{2, 3\}$ \\
+        Choice saturating counter table size & $\{2^{10}, 2^{12}, 2^{14}\}$ \\
+        Choice saturating counter bits     & $\{2, 3\}$ \\
+        \bottomrule
+    \end{tabular}
+    \caption{Hyperparameter sweep for the tournament branch predictor.}
+    \label{tab:tbp_hp}
+\end{table}
+
+\noindent
+Due to the large search space, I only report MPKIs for the top three hyperparameter combinations. The results are provided in Table~\ref{tab:tbp_res}. TODO.
+
+\subsubsection{Gshare}
+
+The hyperparameter sweep detailed in Section~\ref{sec:tbp_hp} was repeated using Gshare instead of GAg. Again, due to the large search space, I only report 
+MPKI for the top three hyperparameter combinations. The results are provided in Table~\ref{tab:tbp_gshare_res}. TODO.
+
+\section{Hashed Perceptron Branch Predictor}
+
+\subsection{Design}
+
+Describe your final design and its configuration
+
+\subsection{Hyperparameter Sweep}
+
+ Report the MPKI results for each of the traces. Also report the
+arithmetic and geometric mean MPKI of all traces. See Table 1.
+
+\section{Custom Branch Predictor}
+
+\subsection{Design}
+
+Explain your final design.
+
+\subsection{Hyperparameter Sweep}
+
+Report the MPKI results for each of the traces. Also report the arithmetic and geometric
+mean MPKI of all traces. Compare with TAGE-SC-L and your Problem 2 results
+
+
+\newpage
+\appendix
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{llll}
+        \toprule
+        \textbf{Trace} & \textbf{TODO MPKI} & \textbf{TODO MPKI} & \textbf{TODO MPKI} \\
+        \midrule
+        SHORT-FP-1  &  &  & \\
+        SHORT-FP-2  &  &  & \\
+        SHORT-FP-3  &  &  & \\
+        SHORT-FP-4  &  &  & \\
+        SHORT-FP-5  &  &  & \\
+        SHORT-INT-1  &  &  & \\
+        SHORT-INT-2  &  &  & \\
+        SHORT-INT-3  &  &  & \\
+        SHORT-INT-4  &  &  & \\
+        SHORT-INT-5  &  &  & \\
+        SHORT-MM-1  &  &  & \\
+        SHORT-MM-2  &  &  & \\
+        SHORT-MM-3  &  &  & \\
+        SHORT-MM-4  &  &  & \\
+        SHORT-MM-5  &  &  & \\
+        SHORT-SERV-1  &  &  & \\
+        SHORT-SERV-2  &  &  & \\
+        SHORT-SERV-3  &  &  & \\
+        SHORT-SERV-4  &  &  & \\
+        SHORT-SERV-5  &  &  & \\
+        LONG-SPEC2K6-00  &  &  & \\
+        LONG-SPEC2K6-01  &  &  & \\
+        LONG-SPEC2K6-02  &  &  & \\
+        LONG-SPEC2K6-03  &  &  & \\
+        LONG-SPEC2K6-04  &  &  & \\
+        LONG-SPEC2K6-05  &  &  & \\
+        LONG-SPEC2K6-06  &  &  & \\
+        LONG-SPEC2K6-07  &  &  & \\
+        LONG-SPEC2K6-08  &  &  & \\
+        LONG-SPEC2K6-09  &  &  & \\
+        LONG-SPEC2K6-10  &  &  & \\
+        LONG-SPEC2K6-11  &  &  & \\
+        LONG-SPEC2K6-12  &  &  & \\
+        LONG-SPEC2K6-13  &  &  & \\
+        LONG-SPEC2K6-14  &  &  & \\
+        LONG-SPEC2K6-15  &  &  & \\
+        LONG-SPEC2K6-16  &  &  & \\
+        LONG-SPEC2K6-17  &  &  & \\
+        LONG-SPEC2K6-18  &  &  & \\
+        LONG-SPEC2K6-19  &  &  & \\
+        \midrule
+        \textbf{Arithmetic Mean}  &  &  & \\
+        \textbf{Geometric Mean}  &  &  & \\
+        \bottomrule
+    \end{tabular}
+    \caption{Results for top-three tournament branch predictor combinations.}
+    \label{tab:tbp_res}
+\end{table}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{llll}
+        \toprule
+        \textbf{Trace} & \textbf{TODO MPKI} & \textbf{TODO MPKI} & \textbf{TODO MPKI} \\
+        \midrule
+        SHORT-FP-1  &  &  & \\
+        SHORT-FP-2  &  &  & \\
+        SHORT-FP-3  &  &  & \\
+        SHORT-FP-4  &  &  & \\
+        SHORT-FP-5  &  &  & \\
+        SHORT-INT-1  &  &  & \\
+        SHORT-INT-2  &  &  & \\
+        SHORT-INT-3  &  &  & \\
+        SHORT-INT-4  &  &  & \\
+        SHORT-INT-5  &  &  & \\
+        SHORT-MM-1  &  &  & \\
+        SHORT-MM-2  &  &  & \\
+        SHORT-MM-3  &  &  & \\
+        SHORT-MM-4  &  &  & \\
+        SHORT-MM-5  &  &  & \\
+        SHORT-SERV-1  &  &  & \\
+        SHORT-SERV-2  &  &  & \\
+        SHORT-SERV-3  &  &  & \\
+        SHORT-SERV-4  &  &  & \\
+        SHORT-SERV-5  &  &  & \\
+        LONG-SPEC2K6-00  &  &  & \\
+        LONG-SPEC2K6-01  &  &  & \\
+        LONG-SPEC2K6-02  &  &  & \\
+        LONG-SPEC2K6-03  &  &  & \\
+        LONG-SPEC2K6-04  &  &  & \\
+        LONG-SPEC2K6-05  &  &  & \\
+        LONG-SPEC2K6-06  &  &  & \\
+        LONG-SPEC2K6-07  &  &  & \\
+        LONG-SPEC2K6-08  &  &  & \\
+        LONG-SPEC2K6-09  &  &  & \\
+        LONG-SPEC2K6-10  &  &  & \\
+        LONG-SPEC2K6-11  &  &  & \\
+        LONG-SPEC2K6-12  &  &  & \\
+        LONG-SPEC2K6-13  &  &  & \\
+        LONG-SPEC2K6-14  &  &  & \\
+        LONG-SPEC2K6-15  &  &  & \\
+        LONG-SPEC2K6-16  &  &  & \\
+        LONG-SPEC2K6-17  &  &  & \\
+        LONG-SPEC2K6-18  &  &  & \\
+        LONG-SPEC2K6-19  &  &  & \\
+        \midrule
+        \textbf{Arithmetic Mean}  &  &  & \\
+        \textbf{Geometric Mean}  &  &  & \\
+        \bottomrule
+    \end{tabular}
+    \caption{Results for top-three tournament branch predictor combinations with Gshare.}
+    \label{tab:tbp_gshare_res}
+\end{table}
+
+\end{document}

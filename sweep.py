@@ -13,6 +13,7 @@ PARAMS = {
         "USE_HASH": [0],
     },
     "TBP": {
+        "USE_GSHARE": [0, 1],
         "LHT_BITS": [10, 12, 14],
         "LPT_BITS": [10, 12, 14],
         "GPT_BITS": [17, 18],
@@ -23,6 +24,14 @@ PARAMS = {
         "GPT_R_BITS": [2, 3],
         "BPT_R_BITS": [2, 3],
     },
+    "HP": {
+        "THRESHOLD": [-30, -1, 0, 1],
+        "PWT_BITS": [11, 12],
+        "GHT_LEN": [7, 15],
+        "GHL_GEO_R": [1.2, 1.3, 1.4],
+        "GHL_GEO_A": [3, 4],
+    },
+    "CUSTOM": {"TEST": [0]},  # TODO
 }
 SIZE = {
     "GAG": lambda c: c["GHR_SIZE"] + c["CNT_SIZE"] * 2 ** c["GHR_SIZE"],
@@ -33,6 +42,10 @@ SIZE = {
     + c["GPT_R_BITS"] * 2 ** c["GPT_BITS"]
     + c["GHR_BITS"]
     + c["BPT_R_BITS"] * 2 ** c["BPT_BITS"],
+    "HP": lambda c: c["GHT_LEN"] * 8 * 2 ** c["PWT_BITS"]
+    + int(c["GHL_GEO_A"] * c["GHL_GEO_R"] ** (c["GHT_LEN"] - 1))
+    + 1,
+    "CUSTOM": lambda c: 2**19,  # TODO
 }
 
 MAX_SIZE = 2**19

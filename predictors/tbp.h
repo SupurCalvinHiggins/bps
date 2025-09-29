@@ -53,6 +53,10 @@
 #define BPT_R_BITS 1
 #endif
 
+#ifndef USE_GSHARE
+#define USE_GSHARE 1
+#endif
+
 // LHT_R is an index into LPT.
 static_assert(LHT_R_BITS >= LPT_BITS, "LPT size is overallocated");
 
@@ -136,7 +140,7 @@ public:
 
   bool GetPrediction(UINT32 PC) {
     const auto lp = lpt_get(lht_get(PC)) >= LPT_R_THRES;
-    const auto gp = gpt_get(m_ghr) >= GPT_R_THRES;
+    const auto gp = gpt_get(USE_GSHARE ? m_ghr ^ PC : m_ghr) >= GPT_R_THRES;
     const auto bp = bpt_get(PC) >= BPT_R_THRES;
     return bp ? gp : lp;
   };
@@ -144,7 +148,7 @@ public:
   void UpdatePredictor(UINT32 PC, bool resolveDir, bool predDir,
                        UINT32 branchTarget) {
     // update global
-    auto &gpt_r = gpt_get(m_ghr);
+    auto &gpt_r = gpt_get(USE_GSHARE ? m_ghr ^ PC : m_ghr);
     const auto gp = gpt_r >= GPT_R_THRES;
     m_ghr = extend(m_ghr, GHR_MAX, resolveDir);
     gpt_r = update(gpt_r, GPT_R_MAX, resolveDir);
