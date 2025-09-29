@@ -41,7 +41,9 @@ inline i8 add_sat(const i8 a, const i8 b) {
 
 #define WEIGHT_TABLE_LEN (4096)
 
-#define THRESHOLD (-1)
+#define THRESHOLD (1)
+#define UPDATE_THRESHOLD_INIT (10)
+#define UPDATE_THRESHOLD_SPEED (18)
 
 #define SIZE (8 * HISTORY_COUNT * WEIGHT_TABLE_LEN + HISTORY_GEO_END)
 
@@ -104,11 +106,18 @@ class PREDICTOR {
 
   std::vector<std::vector<i8>> m_weight_tables;
 
+  i8 m_update_threshold;
+  i32 m_update_threshold_count;
+
+  i32 m_prediction;
+
 public:
   PREDICTOR(void)
       : m_history(HISTORY_GEO_END), m_history_bits(HISTORY_COUNT, 0),
         m_history_hash(HISTORY_COUNT, 0),
-        m_weight_tables(HISTORY_COUNT, std::vector<i8>(WEIGHT_TABLE_LEN, 0)) {
+        m_weight_tables(HISTORY_COUNT, std::vector<i8>(WEIGHT_TABLE_LEN, 0)),
+        m_update_threshold(0), m_update_threshold_count(UPDATE_THRESHOLD_INIT),
+        m_prediction(0) {
     m_history_bits[0] = 0;
     for (usize i = 1; i < m_history_bits.size(); ++i)
       m_history_bits[i] = HISTORY_GEO(i - 1);
@@ -116,24 +125,38 @@ public:
 
   bool GetPrediction(u32 PC) {
     set_history_hash(PC);
-    i32 x = 0;
+    m_prediction = 0;
     assert(m_weight_tables.size() == m_history_hash.size());
     for (usize i = 0; i < m_weight_tables.size(); ++i) {
       const auto &weight_table = m_weight_tables[i];
       const auto h = m_history_hash[i] % weight_table.size();
-      x += weight_table[h];
+      m_prediction += weight_table[h];
     }
-    return x >= THRESHOLD;
+    return m_prediction >= THRESHOLD;
   };
 
   void UpdatePredictor(UINT32 PC, bool resolveDir, bool predDir,
                        UINT32 branchTarget) {
-    if (resolveDir != predDir) {
+    if (resolveDir != predDir || std::abs(m_prediction) < m_update_threshold) {
       const i8 offset = resolveDir ? 1 : -1;
       for (usize i = 0; i < m_weight_tables.size(); ++i) {
         auto &weight_table = m_weight_tables[i];
         const auto h = m_history_hash[i] % weight_table.size();
         weight_table[h] = add_sat(weight_table[h], offset);
+      }
+
+      if (resolveDir != predDir) {
+        m_update_threshold_count += 1;
+        if (m_update_threshold_count >= UPDATE_THRESHOLD_SPEED) {
+          m_update_threshold_count = 0;
+          m_update_threshold = add_sat(m_update_threshold, 1);
+        }
+      } else {
+        m_update_threshold_count -= 1;
+        if (m_update_threshold_count <= -UPDATE_THRESHOLD_SPEED) {
+          m_update_threshold_count = 0;
+          m_update_threshold = add_sat(m_update_threshold, -1);
+        }
       }
     }
     m_history.update(resolveDir);
