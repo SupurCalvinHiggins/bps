@@ -25,9 +25,9 @@
 #define TAGE_HISTORY_GROWTH (1.3)
 #define TAGE_HISTORY_COUNT (16)
 
-#define TAGE_PATTERN_TABLE_BITS (12)
+#define TAGE_PATTERN_TABLE_BITS (11)
 #define TAGE_PATTERN_TABLE_LEN (1 << TAGE_PATTERN_TABLE_BITS)
-#define TAGE_PATTERN_TABLE_TAG_BITS (12)
+#define TAGE_PATTERN_TABLE_TAG_BITS (10)
 
 // Meta predictor config (for choosing altpred when primary is weak)
 #define META_TABLE_BITS (12) // 4096 entries; tune as needed
