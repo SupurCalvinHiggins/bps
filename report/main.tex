@@ -202,10 +202,95 @@ In the future, I need to:
     conflicts).
 \end{enumerate}
 
+\section{LLM Disclosure}
+
+I successfully used LLMs for rapid debugging, setting up my build system and generating the result tables. They were ineffective for programming and explaining 
+branch predictor algorithms (and of course, even if they were effective, they would have harmed my learning).
+
 \printbibliography
 
 \newpage
 \appendix
+\section{Results}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{Hyperparameter} & \textbf{Predictor 1} & \textbf{Predictor 2} & \textbf{Predictor 3} \\
+        \midrule
+        Global history register bits       & 18 & 18 & 18 \\
+        Global saturating counter table size & $2^{17}$ & $2^{17}$ & $2^{17}$ \\
+        Global saturating counter bits     & 2 & 3 & 2 \\
+        Local history table size           & $2^{14}$ & $2^{12}$ & $2^{14}$ \\
+        Local history bits                 & 12 & 14 & 12 \\
+        Local saturating counter table size & $2^{12}$ & $2^{14}$ & $2^{12}$ \\
+        Local saturating counter bits      & 3 & 3 & 3 \\
+        Choice saturating counter table size & $2^{14}$ & $2^{12}$ & $2^{12}$ \\
+        Choice saturating counter bits     & 3 & 3 & 3 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Hyperparameter settings for the top-three tournament branch predictor parameter combinations.}
+    \label{tab:tbp_res_desc}
+\end{table}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{Hyperparameter} & \textbf{Predictor 1} & \textbf{Predictor 2} & \textbf{Predictor 3} \\
+        \midrule
+        Global history register bits       & 18 & 17 & 18 \\
+        Global saturating counter table size & $2^{17}$ & $2^{17}$ & $2^{17}$ \\
+        Global saturating counter bits     & 3 & 3 & 3 \\
+        Local history table size           & $2^{12}$ & $2^{12}$ & $2^{12}$ \\
+        Local history bits                 & 14 & 14 & 14 \\
+        Local saturating counter table size & $2^{14}$ & $2^{14}$ & $2^{14}$ \\
+        Local saturating counter bits      & 3 & 3 & 2 \\
+        Choice saturating counter table size & $2^{12}$ & $2^{12}$ & $2^{12}$ \\
+        Choice saturating counter bits     & 3 & 3 & 3 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Hyperparameter settings for the top-three tournament branch predictor with Gshare parameter combinations.}
+    \label{tab:tbp_gshare_res_desc}
+\end{table}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{Hyperparameter} & \textbf{Predictor 1} & \textbf{Predictor 2} & \textbf{Predictor 3} \\
+        \midrule
+        Threshold                        & 1 & 0 & -1 \\
+        Perceptron weight table size      & $2^{12}$ & $2^{12}$ & $2^{12}$ \\
+        Global history geometric rate     & 3 & 3 & 3 \\
+        Global history geometric minimum  & 1.4 & 1.4 & 1.4 \\
+        Global history table length       & 15 & 15 & 15 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Hyperparameter settings for the top-three hashed perceptron predictor parameter combinations.}
+    \label{tab:hp_res_desc}
+\end{table}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{Hyperparameter} & \textbf{Predictor 1} & \textbf{Predictor 2} & \textbf{Predictor 3} \\
+        \midrule
+        Threshold                        & 1 & 1 & 1 \\
+        Perceptron weight table size      & $2^{12}$ & $2^{12}$ & $2^{12}$ \\
+        Perceptron weight table count                     & 15 & 15 & 15 \\
+        Global history geometric factor   & 1.4 & 1.4 & 1.4 \\
+        Global history geometric minimum    & 3 & 3 & 3 \\
+        Update threshold initial          & 10 & 10 & 10 \\
+        Update threshold speed            & 16 & 18 & 16 \\        
+        Path history maximum history bits  & 22 & 16 & 16 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Hyperparameter settings for the top-three custom hashed perceptron predictor parameter combinations.}
+    \label{tab:custom_res_desc}
+\end{table}
 
 \begin{table}[h]
     \centering
@@ -262,29 +347,6 @@ In the future, I need to:
     \label{tab:tbp_res}
 \end{table}
 
-
-\begin{table}[h]
-    \centering
-    \begin{tabular}{lccc}
-        \toprule
-        \textbf{Hyperparameter} & \textbf{Predictor 1} & \textbf{Predictor 2} & \textbf{Predictor 3} \\
-        \midrule
-        Global history register bits       & 18 & 18 & 18 \\
-        Global saturating counter table size & $2^{17}$ & $2^{17}$ & $2^{17}$ \\
-        Global saturating counter bits     & 2 & 3 & 2 \\
-        Local history table size           & $2^{14}$ & $2^{12}$ & $2^{14}$ \\
-        Local history bits                 & 12 & 14 & 12 \\
-        Local saturating counter table size & $2^{12}$ & $2^{14}$ & $2^{12}$ \\
-        Local saturating counter bits      & 3 & 3 & 3 \\
-        Choice saturating counter table size & $2^{14}$ & $2^{12}$ & $2^{12}$ \\
-        Choice saturating counter bits     & 3 & 3 & 3 \\
-        \bottomrule
-    \end{tabular}
-    \caption{Hyperparameter settings for the top-three tournament branch predictor parameter combinations.}
-    \label{tab:tbp_res_desc}
-\end{table}
-
-
 \begin{table}[h]
     \centering
     \begin{tabular}{llll}
@@ -338,27 +400,6 @@ In the future, I need to:
     \end{tabular}
     \caption{Results for the top-three tournament branch predictor with Gshare parameter combinations in MPKI.}
     \label{tab:tbp_gshare_res}
-\end{table}
-
-\begin{table}[h]
-    \centering
-    \begin{tabular}{lccc}
-        \toprule
-        \textbf{Hyperparameter} & \textbf{Predictor 1} & \textbf{Predictor 2} & \textbf{Predictor 3} \\
-        \midrule
-        Global history register bits       & 18 & 17 & 18 \\
-        Global saturating counter table size & $2^{17}$ & $2^{17}$ & $2^{17}$ \\
-        Global saturating counter bits     & 3 & 3 & 3 \\
-        Local history table size           & $2^{12}$ & $2^{12}$ & $2^{12}$ \\
-        Local history bits                 & 14 & 14 & 14 \\
-        Local saturating counter table size & $2^{14}$ & $2^{14}$ & $2^{14}$ \\
-        Local saturating counter bits      & 3 & 3 & 2 \\
-        Choice saturating counter table size & $2^{12}$ & $2^{12}$ & $2^{12}$ \\
-        Choice saturating counter bits     & 3 & 3 & 3 \\
-        \bottomrule
-    \end{tabular}
-    \caption{Hyperparameter settings for the top-three tournament branch predictor with Gshare parameter combinations.}
-    \label{tab:tbp_gshare_res_desc}
 \end{table}
 
 \begin{table}[h]
@@ -418,23 +459,6 @@ In the future, I need to:
 
 \begin{table}[h]
     \centering
-    \begin{tabular}{lccc}
-        \toprule
-        \textbf{Hyperparameter} & \textbf{Predictor 1} & \textbf{Predictor 2} & \textbf{Predictor 3} \\
-        \midrule
-        Threshold                        & 1 & 0 & -1 \\
-        Perceptron weight table size      & $2^{12}$ & $2^{12}$ & $2^{12}$ \\
-        Global history geometric rate     & 3 & 3 & 3 \\
-        Global history geometric minimum  & 1.4 & 1.4 & 1.4 \\
-        Global history table length       & 15 & 15 & 15 \\
-        \bottomrule
-    \end{tabular}
-    \caption{Hyperparameter settings for the top-three hashed perceptron predictor parameter combinations.}
-    \label{tab:hp_res_desc}
-\end{table}
-
-\begin{table}[h]
-    \centering
     \begin{tabular}{llll}
         \toprule
         \textbf{Trace} & \textbf{Predictor 1} & \textbf{Predictor 2} & \textbf{Predictor 3} \\
@@ -486,26 +510,6 @@ In the future, I need to:
     \end{tabular}
     \caption{Results for the top-three custom hashed perceptron predictor parameter combinations in MPKI.}
     \label{tab:custom_res}
-\end{table}
-
-\begin{table}[h]
-    \centering
-    \begin{tabular}{lccc}
-        \toprule
-        \textbf{Hyperparameter} & \textbf{Predictor 1} & \textbf{Predictor 2} & \textbf{Predictor 3} \\
-        \midrule
-        Threshold                        & 1 & 1 & 1 \\
-        Perceptron weight table size      & $2^{12}$ & $2^{12}$ & $2^{12}$ \\
-        Perceptron weight table count                     & 15 & 15 & 15 \\
-        Global history geometric factor   & 1.4 & 1.4 & 1.4 \\
-        Global history geometric minimum    & 3 & 3 & 3 \\
-        Update threshold initial          & 10 & 10 & 10 \\
-        Update threshold speed            & 16 & 18 & 16 \\        
-        Path history maximum history bits              & 23 & 17 & 17 \\
-        \bottomrule
-    \end{tabular}
-    \caption{Hyperparameter settings for the top-three custom hashed perceptron predictor parameter combinations.}
-    \label{tab:custom_res_desc}
 \end{table}
 
 \end{document}
