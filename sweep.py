@@ -31,7 +31,16 @@ PARAMS = {
         "GHL_GEO_R": [1.2, 1.3, 1.4],
         "GHL_GEO_A": [3, 4],
     },
-    "CUSTOM": {"TEST": [0]},  # TODO
+    "CUSTOM": {
+        "HISTORY_COUNT": [7, 12, 15, 18, 24],
+        "HISTORY_GEO_START": [3, 4],
+        "HISTORY_GEO_FACTOR": [1.2, 1.3, 1.4],
+        "WEIGHT_TABLE_LEN": [2048, 4096, 8192],
+        "THRESHOLD": [0, 1, 15],
+        "UPDATE_THRESHOLD_INIT": [10],
+        "UPDATE_THRESHOLD_SPEED": [16, 18, 20],
+        "PC_HISTORY_THRESHOLD": [9, 17, 23],
+    },
 }
 SIZE = {
     "GAG": lambda c: c["GHR_SIZE"] + c["CNT_SIZE"] * 2 ** c["GHR_SIZE"],
@@ -45,7 +54,10 @@ SIZE = {
     "HP": lambda c: c["GHT_LEN"] * 8 * 2 ** c["PWT_BITS"]
     + int(c["GHL_GEO_A"] * c["GHL_GEO_R"] ** (c["GHT_LEN"] - 1))
     + 1,
-    "CUSTOM": lambda c: 2**19,  # TODO
+    "CUSTOM": lambda c: 8 * c["HISTORY_COUNT"] * c["WEIGHT_TABLE_LEN"]
+    + c["HISTORY_GEO_START"] * c["HISTORY_GEO_FACTOR"] ** (c["HISTORY_COUNT"] - 2)
+    + 1
+    + 64,
 }
 
 MAX_SIZE = 2**19
@@ -58,7 +70,6 @@ RESULTS_PATH = Path("./results")
 
 def is_frontier(predictor: str, comb: dict):
     size = SIZE[predictor](comb)
-    print(MAX_SIZE / size)
     return size <= MAX_SIZE and size >= MIN_SIZE
 
 

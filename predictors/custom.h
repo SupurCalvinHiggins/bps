@@ -12,6 +12,7 @@
 
 using u8 = uint8_t;
 using u32 = uint32_t;
+using u64 = uint64_t;
 using i8 = int8_t;
 using i32 = int32_t;
 using f64 = double;
@@ -48,6 +49,10 @@ inline i8 add_sat(const i8 a, const i8 b) {
 #define HISTORY_GEO(i) (HISTORY_GEO_START * apow(HISTORY_GEO_FACTOR, (i)))
 #define HISTORY_GEO_END (HISTORY_GEO(HISTORY_COUNT - 2))
 
+#ifndef PC_HISTORY_THRESHOLD
+#define PC_HISTORY_THRESHOLD 17
+#endif
+
 #ifndef WEIGHT_TABLE_LEN
 #define WEIGHT_TABLE_LEN (4096)
 #endif
@@ -64,7 +69,7 @@ inline i8 add_sat(const i8 a, const i8 b) {
 #define UPDATE_THRESHOLD_SPEED (18)
 #endif
 
-#define SIZE (8 * HISTORY_COUNT * WEIGHT_TABLE_LEN + HISTORY_GEO_END)
+#define SIZE (8 * HISTORY_COUNT * WEIGHT_TABLE_LEN + HISTORY_GEO_END + 64)
 
 static_assert(SIZE <= (1 << 19), "predictor too large");
 
@@ -104,6 +109,7 @@ class PREDICTOR {
   };
 
   History m_history;
+  u64 m_pc_history;
   std::vector<u32> m_history_bits;
   std::vector<u32> m_history_hash;
 
@@ -117,7 +123,15 @@ class PREDICTOR {
       const auto end = m_history_bits[i];
       const auto bits = end - start;
       m_history.hash(state, start, bits);
-      m_history_hash[i] = XXH32_digest(state);
+      auto h = XXH32_digest(state);
+      if (end < PC_HISTORY_THRESHOLD) {
+        auto ph = m_pc_history;
+        if (end < 16)
+          ph &= (1ULL << (4 * end)) - 1;
+        h ^= ph;
+        h = XXH32(&h, 4, 0);
+      }
+      m_history_hash[i] = h;
       start += bits;
     }
     XXH32_freeState(state);
@@ -132,8 +146,8 @@ class PREDICTOR {
 
 public:
   PREDICTOR(void)
-      : m_history(HISTORY_GEO_END), m_history_bits(HISTORY_COUNT, 0),
-        m_history_hash(HISTORY_COUNT, 0),
+      : m_history(HISTORY_GEO_END), m_pc_history(0),
+        m_history_bits(HISTORY_COUNT, 0), m_history_hash(HISTORY_COUNT, 0),
         m_weight_tables(HISTORY_COUNT, std::vector<i8>(WEIGHT_TABLE_LEN, 0)),
         m_update_threshold(0), m_update_threshold_count(UPDATE_THRESHOLD_INIT),
         m_prediction(0) {
@@ -179,6 +193,7 @@ public:
       }
     }
     m_history.update(resolveDir);
+    m_pc_history = (m_pc_history << 4) | (XXH32(&PC, 4, 0) & 0b1111);
   };
 
   void TrackOtherInst(UINT32 PC, OpType opType, UINT32 branchTarget) {

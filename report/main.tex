@@ -1,6 +1,10 @@
 \documentclass{article}
 
+\usepackage{float}
 \usepackage{booktabs}
+\usepackage{biblatex}
+
+\addbibresource{ref.bib}
 
 \title{ELE 548: Branch Predictors}
 \author{Calvin Higgins}
@@ -70,35 +74,135 @@ hyperparameter combinations were simulated.
 \end{table}
 
 \noindent
-Due to the large search space, I only report MPKIs for the top three hyperparameter combinations. The results are provided in Table~\ref{tab:tbp_res}. TODO.
+Due to the large search space, I only report MPKIs for the top three hyperparameter combinations. The results are provided in Table~\ref{tab:tbp_res} and 
+Table~\ref{tab:tbp_res_desc}. The best combinations attained an (approximate) $4.5$ MKPI arithmetic mean ($3.0$ MKPI geometric mean).
 
 \subsubsection{Gshare}
 
 The hyperparameter sweep detailed in Section~\ref{sec:tbp_hp} was repeated using Gshare instead of GAg. Again, due to the large search space, I only report 
-MPKI for the top three hyperparameter combinations. The results are provided in Table~\ref{tab:tbp_gshare_res}. TODO.
+MPKI for the top three hyperparameter combinations. The results are provided in Table~\ref{tab:tbp_gshare_res} and Table~\ref{tab:tbp_gshare_res_desc}. The best
+combinations attained an (approximate) $4.1$ MKPI arithmetic mean ($2.7$ MKPI geometric mean). Gshare clearly outperformed GAg with a $4.1$ vs. $4.5$ arithmetic
+mean MKPI.
 
 \section{Hashed Perceptron Branch Predictor}
 
 \subsection{Design}
 
-Describe your final design and its configuration
+The hashed perceptron branch predictor implementation follows the provided \texttt{ChampSim}\footnote{https://github.com/ChampSim/ChampSim} implementation 
+without dynamic update thresholds. For simulation purposes, the XXH32 hash function was used for all reductions. In real hardware, it should be replaced with an
+efficient reduction scheme.
+
+\subsubsection{Prediction}
+
+During prediction, a series of perceptron weight tables are indexed with a global history combined with the current program counter, where the length of each 
+global history is geometrically increasing. The corresponding perceptron weights are summed, and compared against a static decision threshold. 
+
+\subsubsection{Update}
+
+If the prediction was incorrect, each corresponding perceptron weight is increased, or decreased by one, to drive the perceptron output closer to, or across the
+decision threshold.
 
 \subsection{Hyperparameter Sweep}
 
- Report the MPKI results for each of the traces. Also report the
-arithmetic and geometric mean MPKI of all traces. See Table 1.
+All combinations of compile-time parameters detailed in Table~\ref{tab:hp_hp} were considered. Hyperparameter combinations that exceeded the strict hardware 
+budget of 64KiB ($2^{19}$ bits) were rejected. Likewise, hyperparameter combinations that did not come within 10\% of the hardware budget were rejected. The 
+remaining 24 hyperparameter combinations were simulated.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        \textbf{Hyperparameter} & \textbf{Values} \\
+        \midrule
+        Threshold & $\{-30, -1, 0, 1\}$ \\
+        Perceptron weight table size & $\{2^{11}, 2^{12}\}$ \\
+        Perceptron weight table count & $7, 15$ \\
+        Global history geometric rate & $1.2, 1.3, 1.4$ \\
+        Global history geometric minimum & $3, 4$ \\
+        \bottomrule
+    \end{tabular}
+    \caption{Hyperparameter sweep for the hashed perceptron predictor.}
+    \label{tab:hp_hp}
+\end{table}
+
+\noindent
+Due to the large search space, I only report MPKIs for the top three hyperparameter combinations. The results are provided in Table~\ref{tab:hp_res} and 
+Table~\ref{tab:hp_res_desc}. The best combinations attained an (approximate) $3.65$ MKPI arithmetic mean ($1.43$ MKPI geometric mean). This is a substantial 
+improvement over tournament branch prediction with PAg and Gshare.
 
 \section{Custom Branch Predictor}
 
-\subsection{Design}
+\subsection{Failed Designs}
 
-Explain your final design.
+I was unable to significantly outperform the \texttt{ChampSim} hashed perceptron implementation. Here are a few highlights from what I tried:
+\begin{enumerate}
+    \item I implemented TAGE based on my lecture notes ($\approx 10$ arithmetic mean MPKI), with valid bits for table entries ($\approx 5$ arithmetic mean 
+    MKPI), with a meta predictor and Gshare fallback (regression), with a loop predictor (regression), and several other tweaks (regression).
+    \item  I implemented TAGE as described in~\cite{seznec2006} with valid bits for table entries ($\approx 3.5$ arithmetic mean MPKI), and several other tweaks
+    (regression).
+    \item I implemented a tournament between hashed perceptron and Gshare (regression).
+\end{enumerate} 
+
+\subsection{Final Design}
+
+My final branch predictor is the hashed perceptron predictor with O-GEHL dynamic update thresholds (as in \texttt{ChampSim}) and path history for tables with 
+short global history lengths~\cite{seznec2005}. 
+
+\subsubsection{Prediction}
+
+Prediction is the same as hashed perceptron, except for history lengths below the path history maximum history bits, the path history is folded into the table
+index. The path history is implemented as a sequence of 4-bit hashes of previous program counters.
+
+\subsubsection{Update}
+
+Update is the same as hashed perceptron, except the perceptron weights are also updated on a weak prediction. Weak predictions are defined by the O-GEHL dynamic
+update threshold algorithm. The PC is also folded into a 4-bit hash, and added to the path history.
 
 \subsection{Hyperparameter Sweep}
 
-Report the MPKI results for each of the traces. Also report the arithmetic and geometric
-mean MPKI of all traces. Compare with TAGE-SC-L and your Problem 2 results
+All combinations of compile-time parameters detailed in Table~\ref{tab:custom_hp} were considered. Hyperparameter combinations that exceeded the strict hardware 
+budget of 64KiB ($2^{19}$ bits) were rejected. Likewise, hyperparameter combinations that did not come within 10\% of the hardware budget were rejected. The 
+remaining 162 hyperparameter combinations were simulated.
 
+\newpage
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{ll}
+        \toprule
+        \textbf{Hyperparameter} & \textbf{Values} \\
+        \midrule
+        Threshold & $\{0, 1, 15\}$ \\
+        Perceptron weight table size & $\{2^{11}, 2^{12}, 2^{13}\}$ \\
+        Perceptron weight table count & $7, 12, 15, 18, 24$ \\
+        Global history geometric rate & $1.2, 1.3, 1.4$ \\
+        Global history geometric minimum & $3, 4$ \\
+        Update threshold initial & $10$ \\
+        Update threshold speed & $16, 18, 20$ \\
+        Path history maximum history bits & $8, 16, 22$ \\
+        \bottomrule
+    \end{tabular}
+    \caption{Hyperparameter sweep for the custom hashed perceptron predictor.}
+    \label{tab:custom_hp}
+\end{table}
+
+\noindent
+Due to the large search space, I only report MPKIs for the top three hyperparameter combinations. The results are provided in Table~\ref{tab:custom_res} and 
+Table~\ref{tab:custom_res_desc}. The best combination attained a $2.767$ MKPI arithmetic mean ($1.044$ MKPI geometric mean), a $0.001$ MKPI arithmetic mean 
+reduction over hashed perceptron without path history. This is an improvement over the simplified hashed perceptron, but still worse than TAGE-SC-L which 
+achieves $\approx 2.1$ MKPI arithmetic mean.
+
+\section{Lessons Learned}
+
+In the future, I need to:
+\begin{enumerate}
+    \item Design reusable abstractions. I had a hard time writing correct predictors and iterating quickly without good data structural abstractions (e.g. 
+    saturating counters).
+    \item Implement a tracing framework. I wasn't able to design effective tweaks  because I did not trace the predictor state and performance (e.g. table 
+    conflicts).
+\end{enumerate}
+
+\printbibliography
 
 \newpage
 \appendix
@@ -107,110 +211,301 @@ mean MPKI of all traces. Compare with TAGE-SC-L and your Problem 2 results
     \centering
     \begin{tabular}{llll}
         \toprule
-        \textbf{Trace} & \textbf{TODO MPKI} & \textbf{TODO MPKI} & \textbf{TODO MPKI} \\
+        \textbf{Trace} & \textbf{Predictor 1} & \textbf{Predictor 2} & \textbf{Predictor 3} \\        
         \midrule
-        SHORT-FP-1  &  &  & \\
-        SHORT-FP-2  &  &  & \\
-        SHORT-FP-3  &  &  & \\
-        SHORT-FP-4  &  &  & \\
-        SHORT-FP-5  &  &  & \\
-        SHORT-INT-1  &  &  & \\
-        SHORT-INT-2  &  &  & \\
-        SHORT-INT-3  &  &  & \\
-        SHORT-INT-4  &  &  & \\
-        SHORT-INT-5  &  &  & \\
-        SHORT-MM-1  &  &  & \\
-        SHORT-MM-2  &  &  & \\
-        SHORT-MM-3  &  &  & \\
-        SHORT-MM-4  &  &  & \\
-        SHORT-MM-5  &  &  & \\
-        SHORT-SERV-1  &  &  & \\
-        SHORT-SERV-2  &  &  & \\
-        SHORT-SERV-3  &  &  & \\
-        SHORT-SERV-4  &  &  & \\
-        SHORT-SERV-5  &  &  & \\
-        LONG-SPEC2K6-00  &  &  & \\
-        LONG-SPEC2K6-01  &  &  & \\
-        LONG-SPEC2K6-02  &  &  & \\
-        LONG-SPEC2K6-03  &  &  & \\
-        LONG-SPEC2K6-04  &  &  & \\
-        LONG-SPEC2K6-05  &  &  & \\
-        LONG-SPEC2K6-06  &  &  & \\
-        LONG-SPEC2K6-07  &  &  & \\
-        LONG-SPEC2K6-08  &  &  & \\
-        LONG-SPEC2K6-09  &  &  & \\
-        LONG-SPEC2K6-10  &  &  & \\
-        LONG-SPEC2K6-11  &  &  & \\
-        LONG-SPEC2K6-12  &  &  & \\
-        LONG-SPEC2K6-13  &  &  & \\
-        LONG-SPEC2K6-14  &  &  & \\
-        LONG-SPEC2K6-15  &  &  & \\
-        LONG-SPEC2K6-16  &  &  & \\
-        LONG-SPEC2K6-17  &  &  & \\
-        LONG-SPEC2K6-18  &  &  & \\
-        LONG-SPEC2K6-19  &  &  & \\
+        SHORT-FP-1  & 3.273 & 3.323 & 3.280 \\
+        SHORT-FP-2  & 1.087 & 1.011 & 1.087 \\
+        SHORT-FP-3  & 0.440 & 0.439 & 0.439 \\
+        SHORT-FP-4  & 0.253 & 0.253 & 0.253 \\
+        SHORT-FP-5  & 0.179 & 0.331 & 0.179 \\
+        SHORT-INT-1  & 7.172 & 6.156 & 7.180 \\
+        SHORT-INT-2  & 8.105 & 8.588 & 8.179 \\
+        SHORT-INT-3  & 10.665 & 10.001 & 10.667 \\
+        SHORT-INT-4  & 2.524 & 2.385 & 2.526 \\
+        SHORT-INT-5  & 0.381 & 0.384 & 0.381 \\
+        SHORT-MM-1  & 8.290 & 8.060 & 8.290 \\
+        SHORT-MM-2  & 10.306 & 9.837 & 10.314 \\
+        SHORT-MM-3  & 1.200 & 0.547 & 1.199 \\
+        SHORT-MM-4  & 1.761 & 1.774 & 1.760 \\
+        SHORT-MM-5  & 4.645 & 4.780 & 4.680 \\
+        SHORT-SERV-1  & 3.121 & 4.500 & 3.342 \\
+        SHORT-SERV-2  & 3.212 & 4.691 & 3.454 \\
+        SHORT-SERV-3  & 4.901 & 5.503 & 4.964 \\
+        SHORT-SERV-4  & 4.116 & 5.286 & 4.281 \\
+        SHORT-SERV-5  & 4.249 & 5.457 & 4.370 \\
+        LONG-SPEC2K6-00  & 3.043 & 3.080 & 3.067 \\
+        LONG-SPEC2K6-01  & 7.840 & 7.651 & 7.840 \\
+        LONG-SPEC2K6-02  & 5.263 & 5.032 & 5.263 \\
+        LONG-SPEC2K6-03  & 5.384 & 5.109 & 5.384 \\
+        LONG-SPEC2K6-04  & 9.958 & 9.442 & 9.958 \\
+        LONG-SPEC2K6-05  & 5.419 & 5.104 & 5.419 \\
+        LONG-SPEC2K6-06  & 2.073 & 1.690 & 2.073 \\
+        LONG-SPEC2K6-07  & 12.594 & 13.151 & 12.773 \\
+        LONG-SPEC2K6-08  & 1.338 & 1.255 & 1.338 \\
+        LONG-SPEC2K6-09  & 5.074 & 4.995 & 5.074 \\
+        LONG-SPEC2K6-10  & 3.408 & 3.104 & 3.410 \\
+        LONG-SPEC2K6-11  & 0.805 & 0.764 & 0.805 \\
+        LONG-SPEC2K6-12  & 12.993 & 11.939 & 12.993 \\
+        LONG-SPEC2K6-13  & 9.815 & 10.047 & 9.863 \\
+        LONG-SPEC2K6-14  & 1.200 & 1.200 & 1.200 \\
+        LONG-SPEC2K6-15  & 1.803 & 1.858 & 1.807 \\
+        LONG-SPEC2K6-16  & 3.701 & 3.647 & 3.702 \\
+        LONG-SPEC2K6-17  & 4.726 & 4.331 & 4.726 \\
+        LONG-SPEC2K6-18  & 1.614 & 1.588 & 1.614 \\
+        LONG-SPEC2K6-19  & 2.249 & 2.171 & 2.250 \\
         \midrule
-        \textbf{Arithmetic Mean}  &  &  & \\
-        \textbf{Geometric Mean}  &  &  & \\
+        \textbf{Arithmetic Mean}  & 4.505 & 4.512 & 4.535 \\
+        \textbf{Geometric Mean}  & 2.981 & 2.988 & 3.001 \\
         \bottomrule
     \end{tabular}
-    \caption{Results for top-three tournament branch predictor combinations.}
+    \caption{Results for top-three tournament branch predictor combinations in MPKI.}
     \label{tab:tbp_res}
+\end{table}
+
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{Hyperparameter} & \textbf{Predictor 1} & \textbf{Predictor 2} & \textbf{Predictor 3} \\
+        \midrule
+        Global history register bits       & 18 & 18 & 18 \\
+        Global saturating counter table size & $2^{17}$ & $2^{17}$ & $2^{17}$ \\
+        Global saturating counter bits     & 2 & 3 & 2 \\
+        Local history table size           & $2^{14}$ & $2^{12}$ & $2^{14}$ \\
+        Local history bits                 & 12 & 14 & 12 \\
+        Local saturating counter table size & $2^{12}$ & $2^{14}$ & $2^{12}$ \\
+        Local saturating counter bits      & 3 & 3 & 3 \\
+        Choice saturating counter table size & $2^{14}$ & $2^{12}$ & $2^{12}$ \\
+        Choice saturating counter bits     & 3 & 3 & 3 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Hyperparameter settings for the top-three tournament branch predictor parameter combinations.}
+    \label{tab:tbp_res_desc}
+\end{table}
+
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{llll}
+        \toprule
+        \textbf{Trace} & \textbf{Predictor 1} & \textbf{Predictor 2} & \textbf{Predictor 3} \\
+        \midrule
+        SHORT-FP-1  & 2.894 & 2.909 & 2.359 \\
+        SHORT-FP-2  & 0.898 & 0.902 & 0.910 \\
+        SHORT-FP-3  & 0.431 & 0.431 & 0.432 \\
+        SHORT-FP-4  & 0.252 & 0.252 & 0.252 \\
+        SHORT-FP-5  & 0.330 & 0.330 & 0.331 \\
+        SHORT-INT-1  & 4.925 & 5.081 & 5.070 \\
+        SHORT-INT-2  & 6.963 & 6.975 & 7.184 \\
+        SHORT-INT-3  & 10.166 & 10.302 & 10.217 \\
+        SHORT-INT-4  & 1.911 & 1.949 & 1.897 \\
+        SHORT-INT-5  & 0.332 & 0.338 & 0.331 \\
+        SHORT-MM-1  & 7.842 & 7.841 & 7.959 \\
+        SHORT-MM-2  & 9.786 & 9.778 & 9.960 \\
+        SHORT-MM-3  & 0.490 & 0.511 & 0.506 \\
+        SHORT-MM-4  & 1.717 & 1.711 & 1.720 \\
+        SHORT-MM-5  & 4.472 & 4.483 & 4.543 \\
+        SHORT-SERV-1  & 2.449 & 2.491 & 2.533 \\
+        SHORT-SERV-2  & 2.569 & 2.608 & 2.666 \\
+        SHORT-SERV-3  & 4.653 & 4.694 & 4.781 \\
+        SHORT-SERV-4  & 3.844 & 3.786 & 3.991 \\
+        SHORT-SERV-5  & 3.576 & 3.547 & 3.701 \\
+        LONG-SPEC2K6-00  & 2.949 & 2.941 & 3.052 \\
+        LONG-SPEC2K6-01  & 7.552 & 7.550 & 7.749 \\
+        LONG-SPEC2K6-02  & 4.419 & 4.595 & 4.475 \\
+        LONG-SPEC2K6-03  & 5.090 & 5.096 & 5.067 \\
+        LONG-SPEC2K6-04  & 9.345 & 9.351 & 9.378 \\
+        LONG-SPEC2K6-05  & 5.045 & 5.032 & 5.110 \\
+        LONG-SPEC2K6-06  & 1.782 & 1.834 & 1.821 \\
+        LONG-SPEC2K6-07  & 12.499 & 12.425 & 12.835 \\
+        LONG-SPEC2K6-08  & 1.214 & 1.218 & 1.228 \\
+        LONG-SPEC2K6-09  & 4.993 & 4.987 & 4.903 \\
+        LONG-SPEC2K6-10  & 2.689 & 2.741 & 2.714 \\
+        LONG-SPEC2K6-11  & 0.764 & 0.759 & 0.778 \\
+        LONG-SPEC2K6-12  & 11.991 & 11.947 & 12.013 \\
+        LONG-SPEC2K6-13  & 9.268 & 9.648 & 9.386 \\
+        LONG-SPEC2K6-14  & 1.200 & 1.200 & 1.200 \\
+        LONG-SPEC2K6-15  & 1.688 & 1.714 & 1.687 \\
+        LONG-SPEC2K6-16  & 3.638 & 3.749 & 3.673 \\
+        LONG-SPEC2K6-17  & 4.407 & 4.482 & 4.424 \\
+        LONG-SPEC2K6-18  & 1.430 & 1.429 & 1.454 \\
+        LONG-SPEC2K6-19  & 2.131 & 2.202 & 2.159 \\
+        \midrule
+        \textbf{Arithmetic Mean} & 4.115 & 4.145 & 4.161 \\
+        \textbf{Geometric Mean} & 2.697 & 2.721 & 2.720 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Results for the top-three tournament branch predictor with Gshare parameter combinations in MPKI.}
+    \label{tab:tbp_gshare_res}
+\end{table}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{Hyperparameter} & \textbf{Predictor 1} & \textbf{Predictor 2} & \textbf{Predictor 3} \\
+        \midrule
+        Global history register bits       & 18 & 17 & 18 \\
+        Global saturating counter table size & $2^{17}$ & $2^{17}$ & $2^{17}$ \\
+        Global saturating counter bits     & 3 & 3 & 3 \\
+        Local history table size           & $2^{12}$ & $2^{12}$ & $2^{12}$ \\
+        Local history bits                 & 14 & 14 & 14 \\
+        Local saturating counter table size & $2^{14}$ & $2^{14}$ & $2^{14}$ \\
+        Local saturating counter bits      & 3 & 3 & 2 \\
+        Choice saturating counter table size & $2^{12}$ & $2^{12}$ & $2^{12}$ \\
+        Choice saturating counter bits     & 3 & 3 & 3 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Hyperparameter settings for the top-three tournament branch predictor with Gshare parameter combinations.}
+    \label{tab:tbp_gshare_res_desc}
 \end{table}
 
 \begin{table}[h]
     \centering
     \begin{tabular}{llll}
         \toprule
-        \textbf{Trace} & \textbf{TODO MPKI} & \textbf{TODO MPKI} & \textbf{TODO MPKI} \\
+        \textbf{Trace} & \textbf{Predictor 1} & \textbf{Predictor 2} & \textbf{Predictor 3} \\
         \midrule
-        SHORT-FP-1  &  &  & \\
-        SHORT-FP-2  &  &  & \\
-        SHORT-FP-3  &  &  & \\
-        SHORT-FP-4  &  &  & \\
-        SHORT-FP-5  &  &  & \\
-        SHORT-INT-1  &  &  & \\
-        SHORT-INT-2  &  &  & \\
-        SHORT-INT-3  &  &  & \\
-        SHORT-INT-4  &  &  & \\
-        SHORT-INT-5  &  &  & \\
-        SHORT-MM-1  &  &  & \\
-        SHORT-MM-2  &  &  & \\
-        SHORT-MM-3  &  &  & \\
-        SHORT-MM-4  &  &  & \\
-        SHORT-MM-5  &  &  & \\
-        SHORT-SERV-1  &  &  & \\
-        SHORT-SERV-2  &  &  & \\
-        SHORT-SERV-3  &  &  & \\
-        SHORT-SERV-4  &  &  & \\
-        SHORT-SERV-5  &  &  & \\
-        LONG-SPEC2K6-00  &  &  & \\
-        LONG-SPEC2K6-01  &  &  & \\
-        LONG-SPEC2K6-02  &  &  & \\
-        LONG-SPEC2K6-03  &  &  & \\
-        LONG-SPEC2K6-04  &  &  & \\
-        LONG-SPEC2K6-05  &  &  & \\
-        LONG-SPEC2K6-06  &  &  & \\
-        LONG-SPEC2K6-07  &  &  & \\
-        LONG-SPEC2K6-08  &  &  & \\
-        LONG-SPEC2K6-09  &  &  & \\
-        LONG-SPEC2K6-10  &  &  & \\
-        LONG-SPEC2K6-11  &  &  & \\
-        LONG-SPEC2K6-12  &  &  & \\
-        LONG-SPEC2K6-13  &  &  & \\
-        LONG-SPEC2K6-14  &  &  & \\
-        LONG-SPEC2K6-15  &  &  & \\
-        LONG-SPEC2K6-16  &  &  & \\
-        LONG-SPEC2K6-17  &  &  & \\
-        LONG-SPEC2K6-18  &  &  & \\
-        LONG-SPEC2K6-19  &  &  & \\
+        SHORT-FP-1  & 1.400 & 1.405 & 1.398 \\
+        SHORT-FP-2  & 1.061 & 1.067 & 1.065 \\
+        SHORT-FP-3  & 0.026 & 0.029 & 0.032 \\
+        SHORT-FP-4  & 0.174 & 0.175 & 0.176 \\
+        SHORT-FP-5  & 0.049 & 0.050 & 0.050 \\
+        SHORT-INT-1  & 0.434 & 0.436 & 0.439 \\
+        SHORT-INT-2  & 6.398 & 6.399 & 6.403 \\
+        SHORT-INT-3  & 10.098 & 10.097 & 10.085 \\
+        SHORT-INT-4  & 0.893 & 0.892 & 0.894 \\
+        SHORT-INT-5  & 0.520 & 0.521 & 0.522 \\
+        SHORT-MM-1  & 10.121 & 10.127 & 10.128 \\
+        SHORT-MM-2  & 11.402 & 11.429 & 11.419 \\
+        SHORT-MM-3  & 0.119 & 0.120 & 0.124 \\
+        SHORT-MM-4  & 1.909 & 1.912 & 1.916 \\
+        SHORT-MM-5  & 5.297 & 5.303 & 5.310 \\
+        SHORT-SERV-1  & 1.867 & 1.873 & 1.876 \\
+        SHORT-SERV-2  & 1.830 & 1.835 & 1.839 \\
+        SHORT-SERV-3  & 4.823 & 4.822 & 4.827 \\
+        SHORT-SERV-4  & 3.600 & 3.605 & 3.612 \\
+        SHORT-SERV-5  & 3.076 & 3.080 & 3.085 \\
+        LONG-SPEC2K6-00  & 2.547 & 2.547 & 2.543 \\
+        LONG-SPEC2K6-01  & 8.708 & 8.707 & 8.706 \\
+        LONG-SPEC2K6-02  & 0.939 & 0.937 & 0.939 \\
+        LONG-SPEC2K6-03  & 0.901 & 0.899 & 0.901 \\
+        LONG-SPEC2K6-04  & 10.826 & 10.817 & 10.819 \\
+        LONG-SPEC2K6-05  & 6.270 & 6.273 & 6.273 \\
+        LONG-SPEC2K6-06  & 0.988 & 0.989 & 0.989 \\
+        LONG-SPEC2K6-07  & 10.928 & 10.923 & 10.924 \\
+        LONG-SPEC2K6-08  & 0.968 & 0.968 & 0.968 \\
+        LONG-SPEC2K6-09  & 4.650 & 4.656 & 4.658 \\
+        LONG-SPEC2K6-10  & 0.979 & 0.980 & 0.980 \\
+        LONG-SPEC2K6-11  & 0.653 & 0.653 & 0.653 \\
+        LONG-SPEC2K6-12  & 15.265 & 15.270 & 15.266 \\
+        LONG-SPEC2K6-13  & 7.422 & 7.419 & 7.419 \\
+        LONG-SPEC2K6-14  & 0.002 & 0.002 & 0.002 \\
+        LONG-SPEC2K6-15  & 0.639 & 0.639 & 0.641 \\
+        LONG-SPEC2K6-16  & 3.744 & 3.743 & 3.747 \\
+        LONG-SPEC2K6-17  & 3.068 & 3.072 & 3.072 \\
+        LONG-SPEC2K6-18  & 0.135 & 0.135 & 0.135 \\
+        LONG-SPEC2K6-19  & 1.448 & 1.451 & 1.452 \\
         \midrule
-        \textbf{Arithmetic Mean}  &  &  & \\
-        \textbf{Geometric Mean}  &  &  & \\
+        \textbf{Arithmetic Mean} & 3.654 & 3.656 & 3.657 \\
+        \textbf{Geometric Mean} & 1.424 & 1.431 & 1.436 \\
         \bottomrule
     \end{tabular}
-    \caption{Results for top-three tournament branch predictor combinations with Gshare.}
-    \label{tab:tbp_gshare_res}
+    \caption{Results for the top-three hashed perceptron predictor parameter combinations in MPKI.}
+    \label{tab:hp_res}
+\end{table}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{Hyperparameter} & \textbf{Predictor 1} & \textbf{Predictor 2} & \textbf{Predictor 3} \\
+        \midrule
+        Threshold                        & 1 & 0 & -1 \\
+        Perceptron weight table size      & $2^{12}$ & $2^{12}$ & $2^{12}$ \\
+        Global history geometric rate     & 3 & 3 & 3 \\
+        Global history geometric minimum  & 1.4 & 1.4 & 1.4 \\
+        Global history table length       & 15 & 15 & 15 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Hyperparameter settings for the top-three hashed perceptron predictor parameter combinations.}
+    \label{tab:hp_res_desc}
+\end{table}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{llll}
+        \toprule
+        \textbf{Trace} & \textbf{Predictor 1} & \textbf{Predictor 2} & \textbf{Predictor 3} \\
+        \midrule
+        SHORT-FP-1  & 1.206 & 1.207 & 1.204 \\
+        SHORT-FP-2  & 0.749 & 0.751 & 0.749 \\
+        SHORT-FP-3  & 0.021 & 0.021 & 0.021 \\
+        SHORT-FP-4  & 0.094 & 0.098 & 0.098 \\
+        SHORT-FP-5  & 0.038 & 0.038 & 0.038 \\
+        SHORT-INT-1  & 0.312 & 0.312 & 0.315 \\
+        SHORT-INT-2  & 4.976 & 4.969 & 4.975 \\
+        SHORT-INT-3  & 7.654 & 7.668 & 7.667 \\
+        SHORT-INT-4  & 0.653 & 0.655 & 0.656 \\
+        SHORT-INT-5  & 0.318 & 0.319 & 0.316 \\
+        SHORT-MM-1  & 7.045 & 7.042 & 7.044 \\
+        SHORT-MM-2  & 8.806 & 8.803 & 8.799 \\
+        SHORT-MM-3  & 0.089 & 0.089 & 0.087 \\
+        SHORT-MM-4  & 1.270 & 1.269 & 1.270 \\
+        SHORT-MM-5  & 4.038 & 4.044 & 4.046 \\
+        SHORT-SERV-1  & 1.294 & 1.284 & 1.286 \\
+        SHORT-SERV-2  & 1.258 & 1.259 & 1.255 \\
+        SHORT-SERV-3  & 3.690 & 3.690 & 3.699 \\
+        SHORT-SERV-4  & 2.741 & 2.744 & 2.743 \\
+        SHORT-SERV-5  & 2.297 & 2.296 & 2.298 \\
+        LONG-SPEC2K6-00  & 1.888 & 1.889 & 1.887 \\
+        LONG-SPEC2K6-01  & 6.836 & 6.832 & 6.829 \\
+        LONG-SPEC2K6-02  & 0.687 & 0.688 & 0.686 \\
+        LONG-SPEC2K6-03  & 0.736 & 0.740 & 0.737 \\
+        LONG-SPEC2K6-04  & 8.274 & 8.270 & 8.272 \\
+        LONG-SPEC2K6-05  & 4.730 & 4.730 & 4.729 \\
+        LONG-SPEC2K6-06  & 0.702 & 0.702 & 0.701 \\
+        LONG-SPEC2K6-07  & 8.686 & 8.691 & 8.696 \\
+        LONG-SPEC2K6-08  & 0.762 & 0.761 & 0.762 \\
+        LONG-SPEC2K6-09  & 3.791 & 3.791 & 3.790 \\
+        LONG-SPEC2K6-10  & 0.764 & 0.766 & 0.764 \\
+        LONG-SPEC2K6-11  & 0.513 & 0.512 & 0.513 \\
+        LONG-SPEC2K6-12  & 10.981 & 10.984 & 10.982 \\
+        LONG-SPEC2K6-13  & 5.639 & 5.638 & 5.641 \\
+        LONG-SPEC2K6-14  & 0.001 & 0.001 & 0.001 \\
+        LONG-SPEC2K6-15  & 0.482 & 0.481 & 0.482 \\
+        LONG-SPEC2K6-16  & 3.086 & 3.088 & 3.085 \\
+        LONG-SPEC2K6-17  & 2.408 & 2.406 & 2.407 \\
+        LONG-SPEC2K6-18  & 0.078 & 0.072 & 0.071 \\
+        LONG-SPEC2K6-19  & 1.099 & 1.100 & 1.100 \\
+        \midrule
+        \textbf{Arithmetic Mean} & 2.767 & 2.768 & 2.768 \\
+        \textbf{Geometric Mean} & 1.046 & 1.045 & 1.044 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Results for the top-three custom hashed perceptron predictor parameter combinations in MPKI.}
+    \label{tab:custom_res}
+\end{table}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{Hyperparameter} & \textbf{Predictor 1} & \textbf{Predictor 2} & \textbf{Predictor 3} \\
+        \midrule
+        Threshold                        & 1 & 1 & 1 \\
+        Perceptron weight table size      & $2^{12}$ & $2^{12}$ & $2^{12}$ \\
+        Perceptron weight table count                     & 15 & 15 & 15 \\
+        Global history geometric factor   & 1.4 & 1.4 & 1.4 \\
+        Global history geometric minimum    & 3 & 3 & 3 \\
+        Update threshold initial          & 10 & 10 & 10 \\
+        Update threshold speed            & 16 & 18 & 16 \\        
+        Path history maximum history bits              & 23 & 17 & 17 \\
+        \bottomrule
+    \end{tabular}
+    \caption{Hyperparameter settings for the top-three custom hashed perceptron predictor parameter combinations.}
+    \label{tab:custom_res_desc}
 \end{table}
 
 \end{document}
